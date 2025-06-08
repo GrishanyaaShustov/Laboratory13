@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Rider
+.idea/
+
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.csproj.user
+*.sln.docstates
