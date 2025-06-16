@@ -40,6 +40,9 @@ public class MyHashTable<T>
 
     public int Count => count;
 
+    public Func<T, object> KeySelector => keySelector;
+    public Func<object, object, bool> KeyComparer => keyComparer;
+
     public int DefaultLength => defaultLength;
     public Point<T>[] Table => table;
 
@@ -55,24 +58,38 @@ public class MyHashTable<T>
     // Добавление элемента
     public void Add(T item)
     {
-        // Создаём новый узел с данными
         var node = new Point<T>(item);
-        // Вычисляем индекс в таблице по ключу элемента
         int index = GetIndexByItem(item);
 
-        // Если в этом индексе ещё нет элементов, просто ставим туда новый узел
         if (table[index] == null)
+        {
             table[index] = node;
+            count++;
+        }
         else
         {
-            // Иначе идём по цепочке (связному списку) до конца и добавляем новый узел туда
             var current = table[index];
-            while (current.Next != null) current = current.Next;
-            current.Next = node;
-        }
+            Point<T> previous = null;
 
-        // Увеличиваем счётчик элементов
-        count++;
+            while (current != null)
+            {
+                object key1 = keySelector(current.Data);
+                object key2 = keySelector(item);
+
+                if (KeyComparer != null)
+                {
+                    if (KeyComparer(key1, key2)) // сравниваем ключи
+                    {
+                        current.Data = item; // замена
+                        return; // не увеличиваем count
+                    }
+                }
+                previous = current;
+                current = current.Next;
+            }
+            previous.Next = node;
+            count++;
+        }
     }
 
     // Поиск элемента по ключу

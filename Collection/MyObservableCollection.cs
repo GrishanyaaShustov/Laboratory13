@@ -17,17 +17,16 @@ public class CollectionHandlerEventArgs : EventArgs
     }
 }
 
-// Класс с событиями
+// Наблюдаемая коллекция с событиями и поддержкой ключей
 public class MyObservableCollection<T> : MyCollection<T> where T : IInit, new()
 {
-    private List<T> items = new List<T>();
-
     public event CollectionHandler CollectionCountChanged;
     public event CollectionHandler CollectionReferenceChanged;
 
     public MyObservableCollection() : base() { }
 
-    public MyObservableCollection(int count) : base()
+    public MyObservableCollection(int count, Func<T, object> keySelector, Func<object, object, bool> keyComparer = null)
+        : base(0, keySelector, keyComparer)
     {
         for (int i = 0; i < count; i++)
         {
@@ -40,7 +39,6 @@ public class MyObservableCollection<T> : MyCollection<T> where T : IInit, new()
     public new void Add(T obj)
     {
         base.Add(obj);
-        items.Add(obj);
         CollectionCountChanged?.Invoke(this, new CollectionHandlerEventArgs("Добавлен элемент", obj));
     }
 
@@ -49,7 +47,6 @@ public class MyObservableCollection<T> : MyCollection<T> where T : IInit, new()
         bool removed = base.Remove(obj);
         if (removed)
         {
-            items.Remove(obj);
             CollectionCountChanged?.Invoke(this, new CollectionHandlerEventArgs("Удалён элемент", obj));
         }
         return removed;
@@ -57,33 +54,60 @@ public class MyObservableCollection<T> : MyCollection<T> where T : IInit, new()
 
     public new void Clear()
     {
-        foreach (var item in items)
+        foreach (var item in this)
         {
             CollectionCountChanged?.Invoke(this, new CollectionHandlerEventArgs("Удалён элемент", item));
         }
         base.Clear();
-        items.Clear();
     }
 
-    public T this[int index]
+    // Индексатор: доступ по ключу (объекту)
+    public T this[T index]
     {
-        get => items[index];
+        get
+        {
+            foreach (var item in this)
+            {
+                if (KeyEquals(item, index))
+                    return item;
+            }
+            throw new KeyNotFoundException("Элемент не найден в коллекции.");
+        }
+
         set
         {
-            items[index] = value;
-            CollectionReferenceChanged?.Invoke(this, new CollectionHandlerEventArgs("Изменён элемент по ссылке", value));
+            
+            // Удаляем старый элемент (если есть)
+            foreach (var item in this)
+            {
+                if (KeyEquals(item, index))
+                {
+                    CollectionReferenceChanged?.Invoke(this, new CollectionHandlerEventArgs("Изменён элемент по ссылке", item));
+                    base.Remove(item);
+                    break;
+                }
+            }
+            // Добавляем новый
+            base.Add(value);
         }
     }
 
-    public int Length => items.Count;
+    private bool KeyEquals(T a, T b)
+    {
+        if (KeySelector != null)
+        {
+            var keyA = KeySelector(a);
+            var keyB = KeySelector(b);
+            return KeyComparer != null ? KeyComparer(keyA, keyB) : Equals(keyA, keyB);
+        }
+        return Equals(a, b);
+    }
 
-    public new IEnumerator<T> GetEnumerator() => items.GetEnumerator();
-    
     public void Print()
     {
-        for (int i = 0; i < items.Count; i++)
+        foreach (var item in this)
         {
-            Console.WriteLine($"[{i}] {items[i]}");
+            Console.WriteLine(item);
         }
     }
 }
