@@ -11,7 +11,7 @@ namespace Car
             _collection = new MyObservableCollection<Car>();
             _collectionChangedCalled = false;
 
-            _collection.CollectionChanged += (sender, args) =>
+            _collection.CollectionCountChanged += (sender, args) =>
             {
                 _collectionChangedCalled = true;
             };
@@ -61,9 +61,10 @@ namespace Car
             var car2 = new LightCar { Brand = "Mercedes", MaxSpeed = 200 };
 
             _collection.Add(car1);
-            _collection[0] = car2;
+            _collection[car1] = car2;
 
-            Assert.AreEqual("Mercedes", _collection[0].Brand);
+            Assert.AreEqual("Mercedes", _collection[car2].Brand);
         }
+
     }
 }
